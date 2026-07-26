@@ -53,7 +53,7 @@ class FeaturedProductHorizontalListWidget extends StatelessWidget {
     } else if (homeData.featuredProductList.isNotEmpty) {
       return SingleChildScrollView(
         child: SizedBox(
-          height: 210.h,
+          height: 218.h,
           child: NotificationListener<ScrollNotification>(
             onNotification: (ScrollNotification scrollInfo) {
               if (scrollInfo.metrics.pixels ==
