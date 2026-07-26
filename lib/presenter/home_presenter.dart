@@ -130,6 +130,7 @@ class HomePresenter extends ChangeNotifier {
   fetchCarouselImages() async {
     var res = await SlidersRepository().getSliders();
     carouselImageList = res.sliders ?? [];
+    //debugPrint('Carousel images fetched: ${carouselImageList.length}');
     isCarouselInitial = false;
     notifyListeners();
   }
