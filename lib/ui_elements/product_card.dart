@@ -46,6 +46,7 @@ class _ProductCardState extends State<ProductCard> {
 
     return InkWell(
       onTap: () {
+        debugPrint('ProductCard tapped: ${widget.slug}');
         Navigator.push(
           context,
           MaterialPageRoute(
