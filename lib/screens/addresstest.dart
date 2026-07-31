@@ -648,21 +648,10 @@ class _AddressState extends State<Address> {
     try {
       var countryResponse = await AddressRepository().getCountryList(name: "");
 
-      // print(
-      //   "COUNTRY DEBUG: countries.length = ${countryResponse.countries.length}",
-      // );
-      // print(
-      //   "COUNTRY DEBUG: countries = ${countryResponse.countries.map((c) => c.name).toList()}",
-      // );
-
       if (!context.mounted) return;
 
       var settingsResponse = await BusinessSettingRepository()
           .getBusinessSettingList();
-
-      print(
-        "ALL SETTINGS: ${settingsResponse.data?.map((d) => '${d.type}=${d.value}').toList()}",
-      );
 
       var hasStateDataList = (settingsResponse.data ?? [])
           .where((setting) => setting.type == "has_state")
@@ -672,12 +661,7 @@ class _AddressState extends State<Address> {
           ? hasStateDataList.first
           : null;
 
-      print("HAS_STATE DEBUG: raw value = ${hasStateData?.value}");
-
-      //bool showStateField = hasStateData?.value == "1";
-       bool showStateField = true;
-
-      print("HAS_STATE DEBUG: showStateField = $showStateField");
+      bool showStateField = hasStateData?.value == "1";
 
       setState(() {
         _showStateField = showStateField;
@@ -686,9 +670,6 @@ class _AddressState extends State<Address> {
       _isAreaRequired = false;
 
       bool showCountryField = countryResponse.countries.length != 1;
-      // print(
-      //   "COUNTRY DEBUG: showCountryField = $showCountryField, countries.length = ${countryResponse.countries.length}",
-      // );
 
       /// ADD
       if (listIndex == null) {
@@ -952,15 +933,6 @@ class _AddressState extends State<Address> {
   }
 
   Future buildShowAddFormDialog(BuildContext context, bool showCountryField) {
-    print("hello world address showCountryField");
-    print(showCountryField);
-    print("hello world show _showStateField");
-    print(_showStateField);
-    print("hello world show _selectedCountry");
-    print(_selectedCountry);
-    print("hello world show _selectedCountry id");
-    print(_selectedCountry?.id);
-
     return showDialog(
       context: context,
       builder: (context) {
@@ -1150,7 +1122,7 @@ class _AddressState extends State<Address> {
                         ),
                       ),
 
-                      // CITY // brock city
+                      // CITY
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8.0),
                         child: Text(
@@ -1179,8 +1151,6 @@ class _AddressState extends State<Address> {
                               );
                             },
                             suggestionsCallback: (name) async {
-                              print("name name");
-                              print(name);
                               if (_showStateField) {
                                 if (_selectedState == null) return [];
                                 var cityResponse = await AddressRepository()
@@ -1190,26 +1160,13 @@ class _AddressState extends State<Address> {
                                     );
                                 return cityResponse.cities;
                               } else {
-                                print(
-                                  "inside else, country: ${_selectedCountry?.id}",
-                                );
                                 if (_selectedCountry == null) return [];
-                                try {
-                                  var cityResponse = await AddressRepository()
-                                      .getCityListByCountry(
-                                        countryId: _selectedCountry!.id!,
-                                        name: name,
-                                      );
-                                  print("cittyResponse : $cityResponse");
-                                  print(
-                                    "cityResponse.cities.length : ${cityResponse.cities?.length}",
-                                  );
-                                  return cityResponse.cities;
-                                } catch (e, st) {
-                                  print("getCityListByCountry ERROR: $e");
-                                  print(st);
-                                  return [];
-                                }
+                                var cityResponse = await AddressRepository()
+                                    .getCityListByCountry(
+                                      countryId: _selectedCountry!.id!,
+                                      name: name,
+                                    );
+                                return cityResponse.cities;
                               }
                             },
                             loadingBuilder: (context) => Center(

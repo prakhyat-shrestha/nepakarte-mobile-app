@@ -215,6 +215,7 @@ class AddressRepository {
     String url =
         ("${AppConfig.BASE_URL}/states-by-country/$countryId?name=$name");
     final response = await ApiRequest.get(url: url, middleware: BannedUser());
+    print("State List Response: ${response.body}");
     return myStateResponseFromJson(response.body);
   }
 
