@@ -165,6 +165,8 @@ class CartRepository {
       middleware: BannedUser(),
     );
 
+    print('CART SUMMARY RAW: ${response.body}');
+
     return cartSummaryResponseFromJson(response.body);
   }
 }

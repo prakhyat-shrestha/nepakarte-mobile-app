@@ -1,4 +1,3 @@
-
 import 'dart:convert';
 import 'package:active_ecommerce_cms_demo_app/screens/payment_method_screen/bkash_screen.dart';
 import 'package:active_ecommerce_cms_demo_app/screens/payment_method_screen/flutterwave_screen.dart';
@@ -740,6 +739,26 @@ class CheckoutProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Future<void> fetchSummary() async {
+  //   var response = await CartRepository().getCartSummaryResponse();
+  //   if (response != null) {
+  //     _subTotal = response.subTotal ?? "0.00";
+  //     _tax = response.tax ?? "0.00";
+  //     _gst = response.gst ?? response.tax ?? "0.00";
+  //     _shippingCost = response.shippingCost ?? "0.00";
+  //     _grandTotal = response.grandTotal.toString();
+  //     _grandTotalValue = response.grandTotalValue ?? 0.0;
+  //     _discount = response.discount ?? "0.00";
+  //     _couponApplied = response.couponApplied ?? false;
+  //     _appliedCouponCode = response.couponCode ?? "";
+
+  //     _totalItemCount = response.totalProduct ?? 0;
+  //     _totalClubPoint = response.clubPoint ?? 0;
+
+  //     notifyListeners();
+  //   }
+  // }
+
   Future<void> fetchSummary() async {
     var response = await CartRepository().getCartSummaryResponse();
     if (response != null) {
@@ -752,12 +771,18 @@ class CheckoutProvider extends ChangeNotifier {
       _discount = response.discount ?? "0.00";
       _couponApplied = response.couponApplied ?? false;
       _appliedCouponCode = response.couponCode ?? "";
-
-      _totalItemCount = response.totalProduct ?? 0;
-      _totalClubPoint = response.clubPoint ?? 0;
-
-      notifyListeners();
     }
+
+    // totalProduct isn't in the summary payload — pull it from the same
+    // endpoint the cart badge uses, so the numbers stay consistent.
+    try {
+      var countRes = await CartRepository().getCartCount();
+      _totalItemCount = countRes.count ?? 0;
+    } catch (e) {
+      _totalItemCount = 0;
+    }
+
+    notifyListeners();
   }
 
   Future<void> _updateShippingAndSummaryBackground() async {
