@@ -5,7 +5,7 @@ class AppConfig {
   static String copyright_text =
       "© NepaKarte $this_year"; //this shows in the splash screen
   static String app_name =
-      "NepaKarte Ecommerce Beta"; //this shows in the splash screen
+      "NepaKarte Ecommerce"; //this shows in the splash screen
   static String search_bar_text =
       "Search in Nepakarte..."; //this will show in app Search bar.
   static String purchase_code =
@@ -20,8 +20,9 @@ class AppConfig {
   //configure this
   static const bool HTTPS =
       true; //if you are using localhost , set this to false
-  static const DOMAIN_PATH =
-      "nepakarte.com"; //use only domain name without http:// or https://
+  // static const DOMAIN_PATH =
+  //     "192.168.1.103/laravel-ecommerce"; //use only domain name without http:// or https://
+  static const DOMAIN_PATH = "nepakarte.com"; //use only domain name without http:// or https://
   //do not configure these below
   static const String API_ENDPATH = "api/v2";
   static const String PROTOCOL = HTTPS ? "https://" : "http://";

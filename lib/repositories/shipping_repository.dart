@@ -5,6 +5,7 @@ import 'package:active_ecommerce_cms_demo_app/app_config.dart';
 import 'package:active_ecommerce_cms_demo_app/data_model/delivery_info_response.dart';
 import 'package:active_ecommerce_cms_demo_app/helpers/shared_value_helper.dart';
 import 'package:active_ecommerce_cms_demo_app/repositories/api-request.dart';
+import 'package:flutter/foundation.dart';
 
 class ShippingRepository {
   Future<dynamic> getDeliveryInfo({String? guestAddress}) async {
@@ -30,6 +31,8 @@ class ShippingRepository {
         "App-Language": app_language.$!,
       },
     );
+    //print("Delivery Info Response: ${response.body}");
+    debugPrint('Delivery Info Response: ${response.body}', wrapWidth: 1024);
     return deliveryInfoResponseFromJson(response.body);
   }
 }

@@ -212,6 +212,7 @@ class DeliveryInfoResponse {
     this.cartItems,
     this.carriers,
     this.pickupPoints,
+    this.deliveryAreas, // NEW
   });
 
   String? name;
@@ -219,6 +220,7 @@ class DeliveryInfoResponse {
   List<CartItem>? cartItems;
   Carriers? carriers;
   List<PickupPoint>? pickupPoints;
+  DeliveryAreas? deliveryAreas; // NEW
 
   factory DeliveryInfoResponse.fromJson(Map<String, dynamic> json) =>
       DeliveryInfoResponse(
@@ -240,6 +242,11 @@ class DeliveryInfoResponse {
                 json["pickup_points"].map((x) => PickupPoint.fromJson(x)),
               )
             : [],
+
+        // NEW — parses "delivery_areas": { "data": [...] }
+        deliveryAreas: json["delivery_areas"] != null
+            ? DeliveryAreas.fromJson(json["delivery_areas"])
+            : null,
       );
 
   Map<String, dynamic> toJson() => {
@@ -252,6 +259,7 @@ class DeliveryInfoResponse {
     "pickup_points": pickupPoints != null
         ? List<dynamic>.from(pickupPoints!.map((x) => x.toJson()))
         : [],
+    "delivery_areas": deliveryAreas?.toJson(), // NEW
   };
 }
 
@@ -310,6 +318,64 @@ class Datum {
     "transit_time": transitTime,
     "free_shipping": freeShipping,
     "transit_price": transitPrice,
+  };
+}
+
+// -------------------- DELIVERY AREAS (NEW) --------------------
+// Mirrors the "carriers" wrapper shape: { "data": [ {...}, {...} ] }
+
+class DeliveryAreas {
+  DeliveryAreas({this.data});
+
+  List<DeliveryArea>? data;
+
+  factory DeliveryAreas.fromJson(Map<String, dynamic> json) => DeliveryAreas(
+    data: json["data"] != null
+        ? List<DeliveryArea>.from(
+            json["data"].map((x) => DeliveryArea.fromJson(x)),
+          )
+        : [],
+  );
+
+  Map<String, dynamic> toJson() => {
+    "data": data != null
+        ? List<dynamic>.from(data!.map((x) => x.toJson()))
+        : [],
+  };
+}
+
+// -------------------- DELIVERY AREA (NEW) --------------------
+// {"id":1,"name":"Outside Valley","transit_time":7,"free_shipping":false,"cost":350}
+
+class DeliveryArea {
+  DeliveryArea({
+    this.id,
+    this.name,
+    this.transitTime,
+    this.freeShipping,
+    this.cost,
+  });
+
+  var id;
+  String? name;
+  var transitTime;
+  bool? freeShipping;
+  var cost; // num — comes through as int (e.g. 350) in your sample JSON
+
+  factory DeliveryArea.fromJson(Map<String, dynamic> json) => DeliveryArea(
+    id: json["id"],
+    name: json["name"],
+    transitTime: json["transit_time"],
+    freeShipping: json["free_shipping"],
+    cost: json["cost"],
+  );
+
+  Map<String, dynamic> toJson() => {
+    "id": id,
+    "name": name,
+    "transit_time": transitTime,
+    "free_shipping": freeShipping,
+    "cost": cost,
   };
 }
 

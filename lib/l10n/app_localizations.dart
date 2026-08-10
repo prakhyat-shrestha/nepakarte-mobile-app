@@ -1109,7 +1109,7 @@ abstract class AppLocalizations {
   /// No description provided for @search_in_active_ecommerce_cms.
   ///
   /// In en, this message translates to:
-  /// **'Search In Active eCommerce CMS...'**
+  /// **'Search In Nepakarte eCommerce...'**
   String get search_in_active_ecommerce_cms;
 
   /// No description provided for @no_carousel_image_found.

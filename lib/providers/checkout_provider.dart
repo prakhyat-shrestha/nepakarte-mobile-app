@@ -3,6 +3,7 @@ import 'package:active_ecommerce_cms_demo_app/screens/payment_method_screen/bkas
 import 'package:active_ecommerce_cms_demo_app/screens/payment_method_screen/flutterwave_screen.dart';
 import 'package:active_ecommerce_cms_demo_app/screens/payment_method_screen/instamojo_screen.dart';
 import 'package:active_ecommerce_cms_demo_app/screens/payment_method_screen/khalti_screen.dart';
+import 'package:active_ecommerce_cms_demo_app/screens/payment_method_screen/connectips_screen.dart';
 import 'package:active_ecommerce_cms_demo_app/screens/payment_method_screen/nagad_screen.dart';
 import 'package:active_ecommerce_cms_demo_app/screens/payment_method_screen/offline_screen.dart';
 import 'package:active_ecommerce_cms_demo_app/screens/payment_method_screen/paypal_screen.dart';
@@ -1070,6 +1071,7 @@ class CheckoutProvider extends ChangeNotifier {
 
     try {
       // ================= PAYMENT FLOW =================
+      print("Payment Method: $checkType");
 
       // STRIPE
       if (checkType == "stripe") {
@@ -1328,6 +1330,24 @@ class CheckoutProvider extends ChangeNotifier {
           context,
           MaterialPageRoute(
             builder: (_) => KhaltiScreen(
+              amount: amount,
+              paymentType: paymentType,
+              paymentMethodKey: paymentMethod,
+              packageId: packageId.toString(),
+              orderId: orderId,
+            ),
+          ),
+        );
+        return;
+      }
+
+      // CONNECT IPS - custom code fube
+      if (checkType == "connectips") {
+        _isPlacingOrder = false;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ConnectIPSScreen(
               amount: amount,
               paymentType: paymentType,
               paymentMethodKey: paymentMethod,

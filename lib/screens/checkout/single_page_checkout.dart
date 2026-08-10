@@ -1054,179 +1054,103 @@ class _CheckoutPageState extends State<CheckoutPage> {
     if (provider.isDeliveryLoading) {
       return ShimmerHelper().buildListShimmer(itemCount: 1);
     }
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: provider.deliveryInfoList.length,
-      itemBuilder: (context, index) {
-        var seller = provider.deliveryInfoList[index];
-        var currentOption =
-            provider.sellerWiseShippingOption[index].shippingOption;
-        return Container(
-          margin: const EdgeInsets.only(bottom: 15),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                seller.name ?? "Store Name",
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
+
+    // sellerIndex -> selected delivery area id (local UI-only state, see note above)
+    final Map<int, int> selectedAreaId = {};
+
+    return StatefulBuilder(
+      builder: (context, setLocalState) {
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: provider.deliveryInfoList.length,
+          itemBuilder: (context, index) {
+            var seller = provider.deliveryInfoList[index];
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 15),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade200),
               ),
-              Padding(padding: .symmetric(vertical: 8), child: DashedDivider()),
-              Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(5),
-                    child: Image.network(
-                      seller.cartItems[0].productThumbnailImage,
-                      width: 60,
-                      height: 60,
-                      fit: BoxFit.cover,
+                  Text(
+                    seller.name ?? "Store Name",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      seller.cartItems[0].productName,
-                      style: const TextStyle(fontSize: 13),
-                      maxLines: 2,
-                    ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: DashedDivider(),
                   ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                "Choose Delivery Type",
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  buildDeliveryTypeButton(
-                    index,
-                    ShippingOption.HomeDelivery,
-                    "Home Delivery",
-                    Icons.home_outlined,
-                    provider,
-                  ),
-                  const SizedBox(width: 10),
-                  buildDeliveryTypeButton(
-                    index,
-                    ShippingOption.PickUpPoint,
-                    "Local Pickup",
-                    Icons.location_on_outlined,
-                    provider,
-                  ),
-                ],
-              ),
-              if (currentOption == ShippingOption.PickUpPoint)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 15),
-                    const Text(
-                      "Select Pickup Point",
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+
+                  // ── Product row ──
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(5),
+                        child: Image.network(
+                          seller.cartItems[0].productThumbnailImage,
+                          width: 60,
+                          height: 60,
+                          fit: BoxFit.cover,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    ...seller.pickupPoints.map<Widget>((point) {
-                      bool isThisPointSelected =
-                          provider.sellerWiseShippingOption[index].shippingId ==
-                          point.id;
-                      return GestureDetector(
-                        onTap: () => provider.onShippingOptionChange(
-                          index,
-                          ShippingOption.PickUpPoint,
-                          pickupPointId: point.id,
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          seller.cartItems[0].productName,
+                          style: const TextStyle(fontSize: 13),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: isThisPointSelected
-                                  ? MyTheme.accent_color
-                                  : Colors.grey.shade300,
-                              width: isThisPointSelected ? 2 : 1,
-                            ),
-                            color: isThisPointSelected
-                                ? MyTheme.accent_color.withValues(alpha: 0.05)
-                                : Colors.white,
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(
-                                Icons.location_city,
-                                size: 20,
-                                color: isThisPointSelected
-                                    ? MyTheme.accent_color
-                                    : Colors.grey,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      point.name,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                        color: isThisPointSelected
-                                            ? MyTheme.accent_color
-                                            : Colors.black,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      "Address: ${point.address}",
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                    Text(
-                                      "Phone: ${point.phone}",
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (isThisPointSelected)
-                                Icon(
-                                  Icons.check_circle,
-                                  color: MyTheme.accent_color,
-                                  size: 20,
-                                ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ],
-                ),
-            ],
-          ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // ── Delivery type options, stacked below the product ──
+                  const Text(
+                    "Choose Delivery Type",
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  ...seller.deliveryAreas?.data?.map<Widget>((area) {
+                        bool isSelected = selectedAreaId[index] == area.id;
+                        return _ShippingOptionTile(
+                          zoneName: area.name ?? "",
+                          transitLabel: "Transit in ${area.transitTime} days",
+                          priceLabel:
+                              "Rs ${(area.cost ?? 0).toStringAsFixed(2)}",
+                          isSelected: isSelected,
+                          onTap: () {
+                            setLocalState(
+                              () => selectedAreaId[index] = area.id,
+                            );
+                            // Wired for later — see the note at the top of
+                            // this file about the provider not yet
+                            // persisting this value.
+                            provider.onShippingOptionChange(
+                              index,
+                              ShippingOption.Carrier,
+                              pickupPointId: area.id,
+                            );
+                          },
+                        );
+                      }).toList() ??
+                      [],
+                ],
+              ),
+            );
+          },
         );
       },
     );
@@ -1722,4 +1646,84 @@ class _CheckoutPageState extends State<CheckoutPage> {
       ),
     ),
   );
+}
+
+// ── Single radio-style shipping zone row (Outside Valley / Inside Ringroad / etc) ──
+class _ShippingOptionTile extends StatelessWidget {
+  final String zoneName;
+  final String transitLabel;
+  final String priceLabel;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _ShippingOptionTile({
+    required this.zoneName,
+    required this.transitLabel,
+    required this.priceLabel,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? MyTheme.accent_color : Colors.grey.shade300,
+            width: isSelected ? 1.5 : 1,
+          ),
+          color: isSelected
+              ? MyTheme.accent_color.withValues(alpha: 0.05)
+              : Colors.white,
+        ),
+        child: Row(
+          children: [
+            Radio<bool>(
+              value: true,
+              groupValue: isSelected,
+              onChanged: (_) => onTap(),
+              activeColor: MyTheme.accent_color,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          zoneName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        priceLabel,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    transitLabel,
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

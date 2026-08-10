@@ -18,7 +18,7 @@
 	<string>6.0</string>
 
 	<key>CFBundleName</key>
-	<string>Active Ecommerce App</string>
+	<string>Nepakarte Ecommerce App</string>
 
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
@@ -58,7 +58,7 @@
     <string></string>
 
     <key>FacebookDisplayName</key>
-    <string>Active Ecommerce</string>
+    <string>Nepakarte Ecommerce</string>
 
 	<key>LSApplicationCategoryType</key>
 	<string></string>

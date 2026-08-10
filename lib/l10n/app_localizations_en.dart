@@ -522,7 +522,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get search_in_active_ecommerce_cms =>
-      'Search In Active eCommerce CMS...';
+      'Search In Nepakarte eCommerce...';
 
   @override
   String get no_carousel_image_found => 'No carousel image found';
