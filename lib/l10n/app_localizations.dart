@@ -4490,6 +4490,12 @@ abstract class AppLocalizations {
   /// **'Pay With Khalti'**
   String get pay_with_khalti;
 
+  /// No description provided for @pay_with_connectips.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay With ConnnectIPS'**
+  String get pay_with_connectips;
+
   /// No description provided for @pirated_app.
   ///
   /// In en, this message translates to:

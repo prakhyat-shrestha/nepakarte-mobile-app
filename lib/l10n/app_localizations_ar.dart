@@ -2254,6 +2254,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get pay_with_khalti => 'Pay With Khalti';
 
   @override
+  String get pay_with_connectips => 'Pay With ConnnectIPS';
+
+  @override
   String get pirated_app =>
       'This is a pirated app. Do not use this. It may have security issues.';
 

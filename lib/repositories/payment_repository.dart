@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+
 import 'dart:convert';
 
 import 'package:active_ecommerce_cms_demo_app/app_config.dart';
@@ -359,4 +360,63 @@ class PaymentRepository {
 
     return nagadPaymentProcessResponseFromJson(response.body);
   }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // ConnectIPS — sends the 4 fields confirmed with backend:
+  // user_id, payment_type, combined_order_id, amount (whole rupees as string)
+  //
+  // STILL UNCONFIRMED: the actual endpoint URL/path — placeholder below.
+  // Confirm the real route with your backend team, then swap it in.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  Future<dynamic> getConnectIPSPaymentResponse({
+    required int? userId,
+    required String paymentType,
+    required int? combinedOrderId,
+    required double? amount,
+  }) async {
+    var postBody = jsonEncode({
+      "user_id": "$userId",
+      "payment_type": paymentType,
+      "combined_order_id": "$combinedOrderId",
+      "amount": "${amount?.round() ?? 0}",
+    });
+
+    print("ConnectIPS postBody: $postBody");
+
+    // TODO: CONFIRM this URL with your backend team.
+    String url = ("${AppConfig.BASE_URL}/connectips/payment/pay");
+
+    final response = await ApiRequest.post(
+      url: url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer ${access_token.$}",
+      },
+      body: postBody,
+      middleware: BannedUser(),
+    );
+
+    return connectIPSPaymentResponseFromJson(response.body);
+  }
+} // ← end of PaymentRepository class (this closing brace was missing before the model code)
+
+// ── Model — lives OUTSIDE the class, at the top level of this file ──
+
+ConnectIPSPaymentResponse connectIPSPaymentResponseFromJson(String str) =>
+    ConnectIPSPaymentResponse.fromJson(json.decode(str));
+
+class ConnectIPSPaymentResponse {
+  ConnectIPSPaymentResponse({this.result, this.message, this.html});
+
+  bool? result;
+  String? message;
+  String? html;
+
+  factory ConnectIPSPaymentResponse.fromJson(Map<String, dynamic> json) =>
+      ConnectIPSPaymentResponse(
+        result: json["result"],
+        message: json["message"],
+        html: json["html"],
+      );
 }

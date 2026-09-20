@@ -1055,102 +1055,91 @@ class _CheckoutPageState extends State<CheckoutPage> {
       return ShimmerHelper().buildListShimmer(itemCount: 1);
     }
 
-    // sellerIndex -> selected delivery area id (local UI-only state, see note above)
-    final Map<int, int> selectedAreaId = {};
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: provider.deliveryInfoList.length,
+      itemBuilder: (context, index) {
+        var seller = provider.deliveryInfoList[index];
 
-    return StatefulBuilder(
-      builder: (context, setLocalState) {
-        return ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: provider.deliveryInfoList.length,
-          itemBuilder: (context, index) {
-            var seller = provider.deliveryInfoList[index];
-
-            return Container(
-              margin: const EdgeInsets.only(bottom: 15),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade200),
+        return Container(
+          margin: const EdgeInsets.only(bottom: 15),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                seller.name ?? "Store Name",
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
               ),
-              child: Column(
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: DashedDivider(),
+              ),
+
+              // ── Product row ──
+              Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    seller.name ?? "Store Name",
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(5),
+                    child: Image.network(
+                      seller.cartItems[0].productThumbnailImage,
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
                     ),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: DashedDivider(),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      seller.cartItems[0].productName,
+                      style: const TextStyle(fontSize: 13),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-
-                  // ── Product row ──
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(5),
-                        child: Image.network(
-                          seller.cartItems[0].productThumbnailImage,
-                          width: 60,
-                          height: 60,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          seller.cartItems[0].productName,
-                          style: const TextStyle(fontSize: 13),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // ── Delivery type options, stacked below the product ──
-                  const Text(
-                    "Choose Delivery Type",
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 10),
-                  ...seller.deliveryAreas?.data?.map<Widget>((area) {
-                        bool isSelected = selectedAreaId[index] == area.id;
-                        return _ShippingOptionTile(
-                          zoneName: area.name ?? "",
-                          transitLabel: "Transit in ${area.transitTime} days",
-                          priceLabel:
-                              "Rs ${(area.cost ?? 0).toStringAsFixed(2)}",
-                          isSelected: isSelected,
-                          onTap: () {
-                            setLocalState(
-                              () => selectedAreaId[index] = area.id,
-                            );
-                            // Wired for later — see the note at the top of
-                            // this file about the provider not yet
-                            // persisting this value.
-                            provider.onShippingOptionChange(
-                              index,
-                              ShippingOption.Carrier,
-                              pickupPointId: area.id,
-                            );
-                          },
-                        );
-                      }).toList() ??
-                      [],
                 ],
               ),
-            );
-          },
+
+              const SizedBox(height: 20),
+
+              // ── Delivery type options ──
+              const Text(
+                "Choose Delivery Type",
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              ...seller.deliveryAreas?.data?.map<Widget>((area) {
+                    bool isSelected =
+                        provider.sellerWiseShippingOption[index].shippingId ==
+                        area.id;
+                    return _ShippingOptionTile(
+                      zoneName: area.name ?? "",
+                      transitLabel: "Transit in ${area.transitTime} days",
+                      priceLabel: "Rs ${(area.cost ?? 0).toStringAsFixed(2)}",
+                      isSelected: isSelected,
+                      // Hits the new delivery_area branch in shipping_cost()
+                      // — see shipping_cost_controller_patch.php — which
+                      // refreshes shippingCost via fetchSummary().
+                      onTap: () => provider.onShippingOptionChange(
+                        index,
+                        ShippingOption.DeliveryArea,
+                        pickupPointId: area.id,
+                      ),
+                    );
+                  }).toList() ??
+                  [],
+            ],
+          ),
         );
       },
     );
@@ -1287,6 +1276,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   ToastComponent.showDialog("Please select a payment method");
                   return;
                 }
+                print("Confirming order with payment method: ${provider.selectedPaymentMethodKey}");
+                print("Confirming order with payment method 2: ${widget.paymentType}");
                 // provider.confirmOrder(context);
                 provider.confirmOrder(
                   context,

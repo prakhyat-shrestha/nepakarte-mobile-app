@@ -1,3 +1,25 @@
+// ─────────────────────────────────────────────────────────────────────────
+// KEY CHANGES from the cloned Khalti version:
+//
+// 1. New repository call needed: PaymentRepository().getConnectIPSPaymentResponse(...)
+//    — you'll need to add this method (mirroring getOrderCreateResponse's
+//    pattern) to POST to whatever endpoint your backend built and return
+//    the parsed { result, message, html } response. I don't know its exact
+//    URL/param names — swap YOUR_ENDPOINT_URL_HERE and the request body
+//    below for whatever your backend team gives you.
+//
+// 2. khalti() is replaced by connectips(), which uses
+//    _webViewController.loadHtmlString(html) instead of loadRequest(url) —
+//    since you already HAVE the page content, no need to fetch it via a
+//    second request.
+//
+// 3. onPageFinished still needs the real ConnectIPS return/success URL
+//    substring — I used a placeholder "/connectips/payment/success" below.
+//    CONFIRM the actual registered return URL with your backend team and
+//    replace it — this is not something to guess, since it decides when
+//    the app thinks payment succeeded.
+// ─────────────────────────────────────────────────────────────────────────
+
 import 'dart:convert';
 
 import 'package:active_ecommerce_cms_demo_app/app_config.dart';
@@ -48,14 +70,63 @@ class _ConnectIPSScreenState extends State<ConnectIPSScreen> {
       if (widget.paymentType == "cart_payment") {
         createOrder();
       } else {
-        khalti();
+        connectips();
+      }
+    }).catchError((e, stack) {
+      // TEMP DEBUG — remove once the real cause is found.
+      print("checkPhoneAvailability chain FAILED: $e");
+      print(stack);
+      if (mounted) {
+        ToastComponent.showDialog("Something went wrong: $e");
       }
     });
   }
 
-  khalti() {
-    String initialUrl =
-        "${AppConfig.BASE_URL}/khalti/payment/pay?payment_type=${widget.paymentType}&combined_order_id=$_combinedOrderId&amount=${widget.amount}&user_id=${user_id.$}&package_id=${widget.packageId}&order_id=${widget.orderId}";
+  createOrder() async {
+    try {
+      var orderCreateResponse = await PaymentRepository().getOrderCreateResponse(
+        widget.paymentMethodKey,
+      );
+      print("getOrderCreateResponse result: ${orderCreateResponse.result}, message: ${orderCreateResponse.message}");
+      if (!mounted) return;
+      if (orderCreateResponse.result == false) {
+        ToastComponent.showDialog(orderCreateResponse.message);
+        Navigator.of(context).pop();
+        return;
+      }
+
+      _combinedOrderId = orderCreateResponse.combined_order_id;
+      print("combined_order_id: $_combinedOrderId");
+      _orderInit = true;
+      setState(() {});
+      connectips();
+    } catch (e, stack) {
+      // TEMP DEBUG — remove once the real cause is found.
+      print("createOrder() FAILED: $e");
+      print(stack);
+      if (!mounted) return;
+      ToastComponent.showDialog("Order creation failed: $e");
+      Navigator.of(context).pop();
+    }
+  }
+
+  // Renamed from khalti() — now POSTs to get the ready-made HTML string
+  // instead of loading a GET URL directly.
+  connectips() async {
+    var response = await PaymentRepository().getConnectIPSPaymentResponse(
+      userId: user_id.$,
+      paymentType: widget.paymentType,
+      combinedOrderId: _combinedOrderId,
+      amount: widget.amount,
+    );
+
+    if (!mounted) return;
+
+    if (response.result != true) {
+      ToastComponent.showDialog(response.message ?? "Payment could not be initiated");
+      Navigator.of(context).pop();
+      return;
+    }
 
     _webViewController
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
@@ -63,53 +134,76 @@ class _ConnectIPSScreenState extends State<ConnectIPSScreen> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onWebResourceError: (error) {},
+          // Fires BEFORE a page loads/renders — this is where we prevent
+          // the visual flash, by stopping unwanted navigations before the
+          // browser ever draws them.
+          onNavigationRequest: (NavigationRequest request) {
+            print("Navigation requested: ${request.url}");
+
+            // Let the actual callback route load normally — we still
+            // need getData() to read its rendered JSON body.
+            if (request.url.contains("/connectips/payment-response")) {
+              return NavigationDecision.navigate;
+            }
+
+            // SAFETY NET: if navigation is heading anywhere else on our
+            // own domain (e.g. the homepage/cart via ConnectIPS's
+            // "Return" button), stop it BEFORE it renders — this is what
+            // eliminates the flash — and react immediately instead.
+            //
+            // TODO: replace "nepakarte.com" if your actual domain/host
+            // differs, and remove this once ConnectIPS's merchant panel
+            // Return/Cancel URL is properly configured.
+            if (request.url.contains("nepakarte.com")) {
+              if (mounted) {
+                ToastComponent.showDialog("Payment cancelled");
+                Navigator.of(context).pop();
+              }
+              return NavigationDecision.prevent;
+            }
+
+            // Anything else (ConnectIPS's own domain, QR/bank pages,
+            // etc.) — let it load normally.
+            return NavigationDecision.navigate;
+          },
           onPageFinished: (page) {
-            if (page.contains("/khalti/payment/success")) {
+            // TEMP DEBUG — remove once confirmed working.
+            print("WebView landed on: $page");
+
+            // Only the legitimate callback route reaches here now, since
+            // everything else was already stopped in onNavigationRequest
+            // above before it could render.
+            if (page.contains("/connectips/payment-response")) {
               getData();
             }
           },
         ),
       )
-      ..loadRequest(
-        Uri.parse(initialUrl),
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer ${access_token.$}",
-          "App-Language": app_language.$!,
-          "Accept": "application/json",
-          "System-Key": AppConfig.system_key,
-        },
-      );
-  }
+      ..loadHtmlString(response.html);
 
-  createOrder() async {
-    var orderCreateResponse = await PaymentRepository().getOrderCreateResponse(
-      widget.paymentMethodKey,
-    );
-    if (!mounted) return;
-    if (orderCreateResponse.result == false) {
-      ToastComponent.showDialog(orderCreateResponse.message);
-      Navigator.of(context).pop();
-      return;
-    }
-
-    _combinedOrderId = orderCreateResponse.combined_order_id;
-    _orderInit = true;
     setState(() {});
-    khalti();
   }
 
   checkPhoneAvailability() async {
     var phoneEmailAvailabilityResponse = await ProfileRepository()
         .getPhoneEmailAvailabilityResponse();
     if (!mounted) return;
-    if (phoneEmailAvailabilityResponse.phone_available == false) {
+    if (phoneEmailAvailabilityResponse.phoneAvailable == false) {
       ToastComponent.showDialog(
-        phoneEmailAvailabilityResponse.phone_available_message,
+        phoneEmailAvailabilityResponse.phoneAvailableMessage ?? "",
       );
       Navigator.of(context).pop();
       return;
     }
+    // NOTE: emailAvailable / emailAvailableMessage exist on this model but
+    // are not checked here — this only ever gated on phone, matching the
+    // original Khalti screen this was copied from. Add a check here if you
+    // want email required too, e.g.:
+    // if (phoneEmailAvailabilityResponse.emailAvailable == false) {
+    //   ToastComponent.showDialog(phoneEmailAvailabilityResponse.emailAvailableMessage ?? "");
+    //   Navigator.of(context).pop();
+    //   return;
+    // }
     return;
   }
 
@@ -131,9 +225,24 @@ class _ConnectIPSScreenState extends State<ConnectIPSScreen> {
     _webViewController
         .runJavaScriptReturningResult("document.body.innerText")
         .then((data) {
-          var responseJSON = jsonDecode(data as String);
-          if (responseJSON.runtimeType == String) {
-            responseJSON = jsonDecode(responseJSON);
+          dynamic responseJSON;
+          try {
+            responseJSON = jsonDecode(data as String);
+            if (responseJSON.runtimeType == String) {
+              responseJSON = jsonDecode(responseJSON);
+            }
+          } catch (e) {
+            // The page body wasn't valid JSON — e.g. the callback route
+            // 404'd and returned a normal HTML page instead of the
+            // expected {"result":...,"message":...} response.
+            print("getData() failed to parse response: $e");
+            print("Raw page text was: $data");
+            if (!mounted) return;
+            ToastComponent.showDialog(
+              "Something went wrong confirming your payment. Please check your orders or contact support.",
+            );
+            Navigator.pop(context);
+            return;
           }
           if (responseJSON["result"] == false) {
             if (!mounted) return;
@@ -193,13 +302,13 @@ class _ConnectIPSScreenState extends State<ConnectIPSScreen> {
         widget.paymentType == "cart_payment") {
       return Center(child: Text(AppLocalizations.of(context)!.creating_order));
     } else {
-      return SingleChildScrollView(
-        child: SizedBox(
-          width: MediaQuery.of(context).size.width,
-          height: MediaQuery.of(context).size.height,
-          child: WebViewWidget(controller: _webViewController),
-        ),
-      );
+      // WebViewWidget is a real embedded browser — it already handles
+      // scrolling ITS OWN content internally. Wrapping it in an outer
+      // SingleChildScrollView + fixed-height SizedBox (the old version)
+      // doesn't help and can clip/cut off content like the QR code,
+      // since the two scroll mechanisms can conflict. Just let it fill
+      // the available space directly instead.
+      return WebViewWidget(controller: _webViewController);
     }
   }
 
@@ -214,7 +323,7 @@ class _ConnectIPSScreenState extends State<ConnectIPSScreen> {
         ),
       ),
       title: Text(
-        LangText(context).local.pay_with_khalti,
+        LangText(context).local.pay_with_connectips,
         style: TextStyle(fontSize: 16, color: MyTheme.accent_color),
       ),
       elevation: 0.0,

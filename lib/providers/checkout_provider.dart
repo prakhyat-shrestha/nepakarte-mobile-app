@@ -33,7 +33,7 @@ import '../screens/payment_method_screen/payfast_screen.dart';
 import '../screens/payment_method_screen/phonepay_screen.dart';
 
 // ignore: constant_identifier_names
-enum ShippingOption { HomeDelivery, PickUpPoint, Carrier }
+enum ShippingOption { HomeDelivery, PickUpPoint, Carrier,DeliveryArea  }
 
 class SellerWithShipping {
   int? sellerId;
@@ -186,7 +186,12 @@ class CheckoutProvider extends ChangeNotifier {
   List<dynamic> _shippingAddressList = [];
   List<dynamic> _deliveryInfoList = [];
   List<dynamic> _paymentTypeList = [];
-  final List<SellerWithShipping> _sellerWiseShippingOption = [];
+  final List<SellerWithShipping> _sellerWiseShippingOption = []; //brocky
+  // sellerIndex -> selected carrier/delivery-area id
+  final Map<int, int> _sellerSelectedCarrierId = {}; //sarojcustom
+  Map<int, int> get sellerSelectedCarrierId =>
+      _sellerSelectedCarrierId; //sarojcustom
+
   dynamic _selectedAddressData;
   int? _selectedAddressId;
   String? _selectedPaymentMethodKey = "";
@@ -570,27 +575,122 @@ class CheckoutProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  //brocky
+
+  /// Call this when the user taps a delivery-type radio tile.
+  /// Purely local — does NOT hit the network. Notifies listeners so the
+  /// selected tile highlights everywhere it's shown.
+  void selectCarrierForSeller(int sellerIndex, int carrierId) {
+    _sellerSelectedCarrierId[sellerIndex] = carrierId;
+    notifyListeners();
+  }
+
+  /// Call this once, when "Proceed to Payment" is tapped — builds the full
+  /// list of seller selections to submit together, mirroring how the
+  /// website's <form> submits shipping_type_{key} + carrier_id_{key} for
+  /// every seller at once (see store_delivery_info in the Blade template).
+  ///
+  /// ADJUST THE FIELD NAMES to match whatever your backend endpoint for
+  /// "delivery info" / "store_delivery_info" actually expects — I'm
+  /// guessing "carrier_id" here based on the Laravel form field name
+  /// (carrier_id_{key}) but you should confirm against your API.
+  List<Map<String, dynamic>> buildCarrierShippingPayload() {
+    List<Map<String, dynamic>> payload = [];
+    for (int i = 0; i < _deliveryInfoList.length; i++) {
+      var seller = _deliveryInfoList[i];
+      var carrierId = _sellerSelectedCarrierId[i];
+      payload.add({
+        "seller_id": seller.ownerId,
+        "shipping_type":
+            "carrier", // matches the Blade template's value="carrier"
+        "carrier_id":
+            carrierId, // null if user hasn't picked one yet — validate before submit
+      });
+    }
+    return payload;
+  }
+
+  /// Optional convenience check before allowing "Proceed to Payment" — mirrors
+  /// the fact that the website's radios are required (one is always
+  /// pre-`checked` by default; you may want the same, or explicit validation).
+  bool allSellersHaveDeliverySelection() {
+    for (int i = 0; i < _deliveryInfoList.length; i++) {
+      if (_sellerSelectedCarrierId[i] == null) return false;
+    }
+    return true;
+  }
+
+  //brockyend
+
+  // Future<void> onShippingOptionChange(
+  //   int sellerIndex,
+  //   ShippingOption option, {
+  //   int? pickupPointId,
+  // }) async {
+  //   _sellerWiseShippingOption[sellerIndex].shippingOption = option;
+  //   if (option == ShippingOption.PickUpPoint) {
+  //     _sellerWiseShippingOption[sellerIndex].shippingId = pickupPointId;
+  //   } else {
+  //     _sellerWiseShippingOption[sellerIndex].shippingId = 0;
+  //   }
+  //   notifyListeners();
+  //   var shippingTypeData = [
+  //     {
+  //       "seller_id": _deliveryInfoList[sellerIndex].ownerId,
+  //       "shipping_type": option == ShippingOption.PickUpPoint
+  //           ? "pickup_point"
+  //           : "home_delivery",
+  //       "shipping_id": pickupPointId ?? 0,
+  //     },
+  //   ];
+  //   var response = await AddressRepository().getShippingCostResponse(
+  //     shippingType: shippingTypeData,
+  //   );
+  //   if (response.result == true) await fetchSummary();
+  // }
+
   Future<void> onShippingOptionChange(
     int sellerIndex,
     ShippingOption option, {
-    int? pickupPointId,
+    int?
+    pickupPointId, // reused as carrier id / delivery-area id depending on option
   }) async {
     _sellerWiseShippingOption[sellerIndex].shippingOption = option;
-    if (option == ShippingOption.PickUpPoint) {
+
+    if (option == ShippingOption.PickUpPoint ||
+        option == ShippingOption.Carrier ||
+        option == ShippingOption.DeliveryArea) {
       _sellerWiseShippingOption[sellerIndex].shippingId = pickupPointId;
     } else {
       _sellerWiseShippingOption[sellerIndex].shippingId = 0;
     }
+
     notifyListeners();
+
+    String shippingTypeString;
+    switch (option) {
+      case ShippingOption.PickUpPoint:
+        shippingTypeString = "pickup_point";
+        break;
+      case ShippingOption.Carrier:
+        shippingTypeString = "carrier";
+        break;
+      case ShippingOption.DeliveryArea:
+        shippingTypeString = "delivery_area"; // matches new backend branch
+        break;
+      case ShippingOption.HomeDelivery:
+        shippingTypeString = "home_delivery";
+        break;
+    }
+
     var shippingTypeData = [
       {
         "seller_id": _deliveryInfoList[sellerIndex].ownerId,
-        "shipping_type": option == ShippingOption.PickUpPoint
-            ? "pickup_point"
-            : "home_delivery",
+        "shipping_type": shippingTypeString,
         "shipping_id": pickupPointId ?? 0,
       },
     ];
+
     var response = await AddressRepository().getShippingCostResponse(
       shippingType: shippingTypeData,
     );
@@ -1071,7 +1171,7 @@ class CheckoutProvider extends ChangeNotifier {
 
     try {
       // ================= PAYMENT FLOW =================
-      print("Payment Method: $checkType");
+     // print("Payment Method: $checkType");
 
       // STRIPE
       if (checkType == "stripe") {
